@@ -1,6 +1,14 @@
+import os
 import requests
 import json
+import webbrowser
 from bs4 import BeautifulSoup
+from http.server import SimpleHTTPRequestHandler
+from socketserver import TCPServer
+
+open("interface/data/events.json", 'w').close()
+f = open("interface/data/events.json", "a")
+f.write("[\n")
 
 url = "https://www.nederlandsebiercultuur.nl/nederlandse-bierwereld/evenementen"
 page = requests.get(url=url)
@@ -32,7 +40,8 @@ for i in range(1, len(h3_elements) - 3):
         # This gets the event title
         if current_element.name == 'b' and current_element.find_next_sibling('br'):
             if event["name"]:
-                print(json.dumps(event))
+                json.dump(event, f)
+                f.write(",\n")
 
             event["name"] = current_element.get_text(strip=True)
 
@@ -56,5 +65,26 @@ for i in range(1, len(h3_elements) - 3):
                     event_link = child_element.get('href')
                     event["url"] = event_link
 
+                    # Extract paragraph text and include HTML of potential <a> tags
+                    event_paragraph = child_element.find_next('p')
+                    if event_paragraph:
+                        event["description"] = str(event_paragraph)
+
         # Move to the next sibling
         current_element = current_element.find_next_sibling()
+
+f.truncate(f.tell()-3)
+f.write("\n]")
+f.close()
+
+interface_url = os.path.dirname(os.path.abspath(__file__)) + "\\interface"
+
+os.chdir(interface_url)
+port = 8000
+handler = SimpleHTTPRequestHandler
+httpd = TCPServer(("", port), handler)
+
+print(f"Serving on http://localhost:{port}/")
+webbrowser.open(f"http://localhost:{port}", new=1)
+
+httpd.serve_forever()

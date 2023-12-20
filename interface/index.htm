@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Interface</title>
+    <!-- Add Bootstrap CSS link -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+</head>
+
+<body>
+
+    <div class="container mt-4">
+        <h1>Event Interface</h1>
+
+        <!-- Input field for years -->
+        <div class="form-group">
+            <label for="yearsInput">Select Year:</label>
+            <select id="yearsInput" class="form-control">
+                <option value="">Select Year</option> <!-- Initial empty option -->
+            </select>
+        </div>
+
+        <!-- Input field for months -->
+        <div class="form-group">
+            <label for="monthsInput">Select Month:</label>
+            <select id="monthsInput" class="form-control">
+                <option value="">Select Month</option> <!-- Initial empty option -->
+            </select>
+        </div>
+
+        <!-- Display selected events -->
+        <div class="mt-4">
+            <h2>Selected Events</h2>
+            <ul id="selectedEvents" class="list-group">
+                <!-- Selected events will be displayed here -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Add Bootstrap JS and Popper.js scripts -->
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+    <!-- Your custom script to fetch JSON and populate the input fields -->
+    <script>
+        // Function to fetch JSON data from the server
+        function fetchData(url) {
+            return fetch(url)
+                .then(response => response.json())
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        // Function to populate the input fields with unique non-empty years and months
+
+        function populateInputFields(jsonData) {
+            var uniqueYears = [...new Set(jsonData.map(event => event.year))].filter(year => year !== '');
+            var uniqueMonths = [...new Set(jsonData.map(event => event.month))].filter(month => month !== '');
+
+            var yearsInput = document.getElementById('yearsInput');
+            var monthsInput = document.getElementById('monthsInput');
+
+            // Clear existing options
+            yearsInput.innerHTML = '';
+            monthsInput.innerHTML = '';
+
+            // Populate years input field
+            yearsInput.appendChild(
+                Object.assign(document.createElement('option'), {
+                    text: 'Select Year',
+                    value: ''
+                })
+            );
+
+            uniqueYears.forEach(function (year) {
+                yearsInput.appendChild(createOption(year, year));
+            });
+
+            // Populate months input field
+            monthsInput.appendChild(
+                Object.assign(document.createElement('option'), {
+                    text: 'Select Month',
+                    value: ''
+                })
+            );
+
+            uniqueMonths.forEach(function (month) {
+                monthsInput.appendChild(createOption(month, month));
+            });
+
+            // Add event listeners to handle changes in the selected values
+            yearsInput.addEventListener('change', updateSelectedEvents);
+            monthsInput.addEventListener('change', updateSelectedEvents);
+        }
+
+        // Helper function to create an option element
+        function createOption(text, value) {
+            var option = document.createElement('option');
+            option.text = text;
+            option.value = value;
+            return option;
+        }
+
+
+        // Function to update the list of selected events based on the selected year and month
+        function updateSelectedEvents() {
+            var selectedYear = document.getElementById('yearsInput').value;
+            var selectedMonth = document.getElementById('monthsInput').value;
+
+            // Fetch JSON data and filter events based on the selected year and month
+            fetchData('/data/events.json')
+                .then(jsonData => {
+                    var selectedEvents = jsonData.filter(event =>
+                        (selectedYear === '' || event.year === selectedYear) &&
+                        (selectedMonth === '' || event.month === selectedMonth)
+                    );
+
+                    displaySelectedEvents(selectedEvents);
+                });
+        }
+
+        // Function to display selected events in the list
+        function displaySelectedEvents(selectedEvents) {
+            var selectedEventsList = document.getElementById('selectedEvents');
+            selectedEventsList.innerHTML = '';
+
+            if (selectedEvents.length === 0) {
+                var listItem = document.createElement('li');
+                listItem.className = 'list-group-item';
+                listItem.textContent = 'No events match the selected criteria.';
+                selectedEventsList.appendChild(listItem);
+            } else {
+                selectedEvents.forEach(event => {
+                    var listItem = document.createElement('li');
+                    listItem.className = 'list-group-item';
+
+                    // Format the event details
+                    listItem.innerHTML = `<strong>${event.name}</strong><br>`;
+
+                    if (event.date) {
+                        listItem.innerHTML += `Datum: ${event.date}<br>`;
+                    }
+
+                    if (event.location) {
+                        listItem.innerHTML += `Locatie: ${event.location}<br>`;
+                    }
+
+                    if (event.url) {
+                        listItem.innerHTML += `URL: <a href="${event.url}" target="_blank">${event.url}</a><br>`;
+                    }
+
+                    if (event.description) {
+                        listItem.innerHTML += `<br>${event.description}`;
+                    }
+
+                    selectedEventsList.appendChild(listItem);
+                });
+            }
+        }
+
+
+        // Call the function when the page is loaded
+        window.onload = function () {
+            // Fetch JSON data and then populate input fields
+            fetchData('/data/events.json')
+                .then(jsonData => populateInputFields(jsonData));
+        };
+    </script>
+
+</body>
+
+</html>
